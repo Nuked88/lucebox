@@ -28,6 +28,9 @@ consolidation of this list into CLI flags is tracked as follow-up work.
 | `DFLASH_MMID_GROUPED_DEVICE` | -1 | Optional zero-based device restriction; unset/-1 applies to every eligible device. |
 | `DFLASH_DS4_MOE_TP` / `DFLASH_DS4_MOE_TP_INPROC` | unset | BURN-IN: enable DeepSeek4 route-owner expert parallelism in one process. |
 | `DFLASH_DS4_MOE_TP_GPU` | auto | HIP device for the cold DeepSeek4 expert owner. |
+| `DFLASH_DS4_TP_FUSED_CACHE_SLOTS` | 2 | BURN-IN: number of heterogeneous verifier schedulers retained; higher values retain substantially more scratch on both GPUs. |
+| `DFLASH_DS4_VERIFY_FORCE_GRAPH_REPLAY` | unset | OPT-IN: bypass graph property scans only after warmup; scheduler-generation checks remain mandatory. |
+| `GGML_DS4_FA_SERIAL_INDEX_SCAN` | unset | DEBUG/A-B: restore the serial indexed-attention mask scan instead of the long-context HIP parallel scan. |
 | `GGML_CUDA_BATCH_PEER_COPIES` | unset | BURN-IN: publish ordered HIP peer copies with one cross-device dependency per source/destination pair. |
 | `DFLASH_MOE_PREFILL_PERSISTENT_OWNER_ALLOC` | 1 for qualified long heterogeneous prefill | KILL SWITCH: =0 restores per-layer route/owner scratch allocation. |
 | `DFLASH_MOE_TP_*` / `DFLASH_MOE_HYBRID_PREFILL_EAGER` | unset | BURN-IN: model-neutral names for common heterogeneous-MoE scheduling and kernel policy. Existing `DFLASH_DS4_*` names remain compatibility aliases. |
@@ -91,6 +94,7 @@ consolidation of this list into CLI flags is tracked as follow-up work.
 - `DFLASH_DS4_TIMING` - deepseek4_backend.cpp, deepseek4_target_shard_ipc_daemon.cpp
 - `DFLASH_DS4_TP_CAPTURE_CACHE_SLOTS` - deepseek4_fused_verify.inc
 - `DFLASH_DS4_TP_FUSED_CACHE_SLOTS` - deepseek4_fused_verify.inc
+- `DFLASH_DS4_VERIFY_FORCE_GRAPH_REPLAY` - deepseek4_fused_verify.inc
 - `DFLASH_DS4_TOPK` - deepseek4_graph.cpp
 - `DFLASH_EXPERT_BUDGET_MB` - deepseek4_backend.cpp, laguna_backend.cpp, qwen35moe_backend.cpp
 - `DFLASH_EXPERT_BUDGET_PCT` - laguna_backend.cpp
