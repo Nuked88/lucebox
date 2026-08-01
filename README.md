@@ -24,6 +24,11 @@
 
 ---
 
+> **Experimental fork:** the branch `agent/qwen36-vision-dflash` is based on
+> [upstream PR #571](https://github.com/Luce-Org/lucebox/pull/571) and adds
+> opt-in DFlash decode after Qwen3.6 multimodal prefill. See
+> [the provenance, build instructions, and limitations](docs/experimental-qwen36-vision-dflash.md).
+
 ## Inference Engine Optimizations
 
 Each one is self-contained with setup instructions and benchmark notes.
