@@ -48,6 +48,15 @@
 namespace dflash::common {
 
 namespace {
+static bool vision_dflash_enabled() {
+    const char * value = std::getenv("DFLASH_VISION_DFLASH");
+    if (!value || !value[0]) return false;
+    return std::strcmp(value, "0") != 0 &&
+           std::strcmp(value, "false") != 0 &&
+           std::strcmp(value, "off") != 0 &&
+           std::strcmp(value, "no") != 0;
+}
+
 static float bf16_bits_to_f32(uint16_t bits) {
     union {
         uint32_t u;
@@ -862,7 +871,14 @@ GenerateResult Qwen35Backend::generate_impl(const GenerateRequest & req,
         // generation. Most requests never hit the tail because the
         // model closes </think> naturally well before the budget edge.
         bool decode_ok = false;
-        const bool force_ar = req.force_ar_decode || use_multimodal;
+        const bool use_vision_dflash =
+            use_multimodal && vision_dflash_enabled();
+        const bool force_ar =
+            req.force_ar_decode || (use_multimodal && !use_vision_dflash);
+        if (use_vision_dflash) {
+            std::fprintf(stderr,
+                         "[vision] experimental DFlash decode enabled\n");
+        }
         if (force_ar) {
             decode_ok = do_ar_decode(committed, req.n_gen, result.tokens, out_io,
                                      req.budget_hook,
@@ -1014,7 +1030,10 @@ GenerateResult Qwen35Backend::restore_and_generate_impl(int slot,
         // generation. Most requests never hit the tail because the
         // model closes </think> naturally well before the budget edge.
         bool decode_ok = false;
-        const bool force_ar = req.force_ar_decode || use_multimodal;
+        const bool use_vision_dflash =
+            use_multimodal && vision_dflash_enabled();
+        const bool force_ar =
+            req.force_ar_decode || (use_multimodal && !use_vision_dflash);
         if (force_ar) {
             decode_ok = do_ar_decode(committed, req.n_gen, result.tokens, out_io,
                                      req.budget_hook,
@@ -1427,6 +1446,7 @@ int Qwen35Backend::do_prefill_multimodal(MultimodalPrompt & mm,
         const auto chunk_type = mtmd_input_chunk_get_type(chunk);
         const bool is_last_chunk = (ci + 1 == n_chunks);
         const int kv_pos = committed;
+        int last_graph_n_tokens = 0;
 
         if (chunk_type == MTMD_INPUT_CHUNK_TYPE_TEXT) {
             size_t n_tokens_sz = 0;
@@ -1471,6 +1491,7 @@ int Qwen35Backend::do_prefill_multimodal(MultimodalPrompt & mm,
                                             /*non_causal_within_chunk=*/false)) {
                     return -1;
                 }
+                last_graph_n_tokens = sub_n;
                 start += sub_n;
             }
 
@@ -1519,6 +1540,7 @@ int Qwen35Backend::do_prefill_multimodal(MultimodalPrompt & mm,
                                         non_causal)) {
                 return -1;
             }
+            last_graph_n_tokens = n_tokens;
 
             committed = kv_pos + (int)mtmd_input_chunk_get_n_pos(chunk);
         } else {
@@ -1539,11 +1561,15 @@ int Qwen35Backend::do_prefill_multimodal(MultimodalPrompt & mm,
         }
 
         int32_t last_tok = -1;
-        ggml_backend_tensor_get(sg_.argmax_tokens, &last_tok, 0, sizeof(int32_t));
+        const size_t last_argmax_offset = is_last_chunk
+            ? (size_t)(last_graph_n_tokens - 1) * sizeof(int32_t)
+            : 0;
+        ggml_backend_tensor_get(sg_.argmax_tokens, &last_tok,
+                                last_argmax_offset, sizeof(int32_t));
         cache_.last_tok = last_tok;
         if (is_last_chunk) {
             prefill_last_logits_offset_ =
-                (size_t)(mtmd_input_chunk_get_n_tokens(chunk) - 1) *
+                (size_t)(last_graph_n_tokens - 1) *
                 (size_t)vocab * sizeof(float);
             prefill_last_logits_valid_ = true;
         }

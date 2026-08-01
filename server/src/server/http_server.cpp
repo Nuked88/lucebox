@@ -3128,7 +3128,9 @@ void HttpServer::prepare_generation_inputs(
     if (req.multimodal) {
         inputs.request.multimodal =
             std::make_unique<MultimodalPrompt>(*req.multimodal);
-        inputs.request.force_ar_decode = true;
+        // The backend keeps AR as the default for vision. Experimental
+        // single-GPU builds can opt into DFlash with DFLASH_VISION_DFLASH=1.
+        inputs.request.force_ar_decode = false;
     }
     inputs.request.n_gen = inputs.generation_cap;
     inputs.request.sampler = req.sampler;
